@@ -99,9 +99,12 @@ class MainActivity : AppCompatActivity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         if (data != null && resultCode == Activity.RESULT_OK && requestCode == GALLERY_REQUEST_CODE) {
             val applySepiaFilter = buildSepiaFilterRequests(data)
+            val zipFiles = OneTimeWorkRequest.Builder(CompressWorker::class.java).build()
 
             val workManager = WorkManager.getInstance()
-            workManager.beginWith(applySepiaFilter).enqueue()
+            workManager.beginWith(applySepiaFilter)
+                .then(zipFiles)
+                .enqueue()
         }
     }
 
