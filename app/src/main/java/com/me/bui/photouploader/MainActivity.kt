@@ -100,10 +100,14 @@ class MainActivity : AppCompatActivity() {
         if (data != null && resultCode == Activity.RESULT_OK && requestCode == GALLERY_REQUEST_CODE) {
             val applySepiaFilter = buildSepiaFilterRequests(data)
             val zipFiles = OneTimeWorkRequest.Builder(CompressWorker::class.java).build()
+            val uploadZip = OneTimeWorkRequest.Builder(UploadWorker::class.java).build()
+            val cleanFiles = OneTimeWorkRequest.Builder(CleanFilesWorker::class.java).build()
 
             val workManager = WorkManager.getInstance()
-            workManager.beginWith(applySepiaFilter)
+            workManager.beginWith(cleanFiles)
+                .then(applySepiaFilter)
                 .then(zipFiles)
+                .then(uploadZip)
                 .enqueue()
         }
     }
