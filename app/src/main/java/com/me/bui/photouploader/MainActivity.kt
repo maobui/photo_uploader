@@ -2,6 +2,7 @@ package com.me.bui.photouploader
 
 import android.Manifest
 import android.app.Activity
+import android.arch.lifecycle.Observer
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -10,10 +11,7 @@ import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.view.View
-import androidx.work.Data
-import androidx.work.ExistingWorkPolicy
-import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
+import androidx.work.*
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -32,6 +30,7 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
         private const val UNIQUE_WORK_NAME = "UNIQUE_WORK_NAME"
+        private const val WORK_TAG = "WORK_TAG"
     }
 
     private var permissionRequestCount = 0
@@ -42,12 +41,17 @@ class MainActivity : AppCompatActivity() {
         initUi()
 
         requestPermissionsIfNecessary()
+        observeWork()
     }
 
     private fun initUi() {
         uploadGroup.visibility = View.GONE
 
         pickPhotosButton.setOnClickListener { showPhotoPicker() }
+
+        cancelButton.setOnClickListener {
+            WorkManager.getInstance().cancelUniqueWork(UNIQUE_WORK_NAME)
+        }
     }
 
     private fun showPhotoPicker() {
@@ -102,7 +106,7 @@ class MainActivity : AppCompatActivity() {
         if (data != null && resultCode == Activity.RESULT_OK && requestCode == GALLERY_REQUEST_CODE) {
             val applySepiaFilter = buildSepiaFilterRequests(data)
             val zipFiles = OneTimeWorkRequest.Builder(CompressWorker::class.java).build()
-            val uploadZip = OneTimeWorkRequest.Builder(UploadWorker::class.java).build()
+            val uploadZip = OneTimeWorkRequest.Builder(UploadWorker::class.java).addTag(WORK_TAG).build()
             val cleanFiles = OneTimeWorkRequest.Builder(CleanFilesWorker::class.java).build()
 
             val workManager = WorkManager.getInstance()
@@ -148,5 +152,18 @@ class MainActivity : AppCompatActivity() {
             builder.putInt(KEY_IMAGE_INDEX, index)
         }
         return builder.build()
+    }
+
+    private fun observeWork() {
+        val statuses = WorkManager.getInstance().getWorkInfosByTagLiveData(WORK_TAG)
+        statuses.observe(this,
+            Observer<List<WorkInfo>> { workInfoList ->
+                val currentWorkStatus = workInfoList?.getOrNull(0)
+                val isWorkActive = currentWorkStatus?.state?.isFinished == false
+
+                val uploadVisibility = if (isWorkActive) View.VISIBLE else View.GONE
+
+                uploadGroup.visibility = uploadVisibility
+            })
     }
 }
