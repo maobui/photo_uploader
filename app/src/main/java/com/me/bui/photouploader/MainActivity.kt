@@ -11,6 +11,7 @@ import android.support.v4.content.ContextCompat
 import android.support.v7.app.AppCompatActivity
 import android.view.View
 import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.WorkManager
 import kotlinx.android.synthetic.main.activity_main.*
@@ -30,6 +31,7 @@ class MainActivity : AppCompatActivity() {
             Manifest.permission.READ_EXTERNAL_STORAGE,
             Manifest.permission.WRITE_EXTERNAL_STORAGE
         )
+        private const val UNIQUE_WORK_NAME = "UNIQUE_WORK_NAME"
     }
 
     private var permissionRequestCount = 0
@@ -104,7 +106,7 @@ class MainActivity : AppCompatActivity() {
             val cleanFiles = OneTimeWorkRequest.Builder(CleanFilesWorker::class.java).build()
 
             val workManager = WorkManager.getInstance()
-            workManager.beginWith(cleanFiles)
+            workManager.beginUniqueWork(UNIQUE_WORK_NAME, ExistingWorkPolicy.REPLACE, cleanFiles)
                 .then(applySepiaFilter)
                 .then(zipFiles)
                 .then(uploadZip)
